@@ -1,0 +1,56 @@
+name: Auto Merge PRs
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  # Test job to ensure code quality before merging
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript compilation
+        run: npx tsc -b
+
+      - name: Run build
+        run: npm run build
+
+  # Auto-merge job that runs after tests pass
+  merge-pr:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - name: Auto merge PR via API
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log(`Merging PR #${context.payload.pull_request.number}...`);
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              merge_method: "squash"
+            });
