@@ -5,5 +5,4 @@ dist
 README.md
 .env
 .dockerignore
-Dockerfile
 package-lock.json
